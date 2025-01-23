@@ -1,5 +1,6 @@
 package main
 
+// Load the required libraries
 import (
 	"encoding/json"
 	"log"
@@ -46,8 +47,28 @@ func HashPassword(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
+// VerifyPassword using bcrypt
+func VerifyPassword(w http.ResponseWriter, r *http.Request) {
+	var req VerifyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	err := bcrypt.CompareHashAndPassword([]byte(req.Hash), []byte(req.Password))
+	if err != nil {
+		http.Error(w, "Password does not match hash", http.StatusUnauthorized)
+		return
+	}
+
+	res := VerifyResponse{Match: true}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
+}
+
 func main() {
 	http.HandleFunc("/hash", HashPassword)
+	http.HandleFunc("/verify", VerifyPassword)
 
 	log.Println("Microservice running on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
